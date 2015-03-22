@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title>Your ToDo list</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.5/jquery.min.js"></script>
+    <script type="text/javascript">
+        function ajax_csfr() {
+            $.ajaxSetup({
+                'beforeSend': function (xhr) {
+                    xhr.setRequestHeader('X-CSRFToken', '{{ csrf_token }}');
+                }
+            });
+        }
+
+        function checkbox_onclick(event) {
+                ajax_csfr();
+                $.post('/todo/change_status/', {'id': $(this).attr('id')}, function (data) {
+                    var p = $(event.target).next();
+                    if (data.done) {
+                        p.addClass('text-muted');
+                    } else {
+                        p.removeClass('text-muted');
+                    }
+                }, "json");
+            }
+
+        $(document).ready(function() {
+            var hide_finished = false;
+
+            $('input:checkbox').click(checkbox_onclick);
+
+            $('#task_form').submit(function (e) {
+                ajax_csfr();
+                $.post(location.href, $(this).serialize(), function (data) {
+                    $("#id_text").val('');
+                    var input = $('<input/>').attr({
+                        type: 'checkbox',
+                        id: data.id,
+                        name: 'test',
+                        value: data.done
+                    });
+                    input.click(checkbox_onclick);
+                    var p = $('<p/>').html(data.text);
+                    var label = $('<label/>').append(input).append(p);
+                    $('#task_list').append(
+                            $('<div/>')
+                                    .addClass("checkbox")
+                                    .append(label)
+                    );
+                }, "json");
+                e.preventDefault();
+            });
+        });
+    </script>
+</head>
+<body>
+    <div class="container">
+        <a href="/todo/logout/">Log out</a><hr>
+        <form id='task_form' method="post" class="form-inline">
+            <div class="form-group" style="width: 70%;"> {% csrf_token %}
+                {{ form.text }}
+                <button type="submit" class="btn btn-success">Create a task</button>
+            </div>
+        </form>
+        <br>
+        <div>
+            <p class="lead">Your ToDo list</p>
+            <div id="task_list">
+                {% for task in tasks %}
+                    <div class="checkbox">
+                        <label>
+                            <input type="checkbox" id='{{ task.id }}' value={{ task.done }} {% if task.done %} checked {% endif %}>
+                            <p {% if task.done %} class="text-muted" {% endif %}>{{ task.text }}</p>
+                        </label>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</body>
+</html>
